@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// https://playwright.dev/docs/test-configuration
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -11,7 +10,7 @@ export default defineConfig({
     ['html', { open: 'never' }],
   ],
   use: {
-    baseURL: 'http://localhost:4173/game01/',
+    baseURL: 'http://localhost:5174/tetris/',
     trace: 'on-first-retry',
     ...devices['Desktop Chrome'],
   },
@@ -22,8 +21,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev -- --port 4173 --strictPort',
-    url: 'http://localhost:4173/game01/',
+    command: 'npm run dev -- --port 5174 --strictPort',
+    url: 'http://localhost:5174/tetris/',
     reuseExistingServer: !process.env.CI,
   },
 })

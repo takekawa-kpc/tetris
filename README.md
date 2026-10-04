@@ -1,25 +1,11 @@
-# Tetris
+## テスト環境
+- Vite + React + Tailwind を使ってシンプルなTetrisを構築しています。
+- 1x1 のピースは **ロジックの基礎検証** 用に使用しています。実際の Tetris では 4×4 のブロック（I, O, T, S, Z, J, L）を扱う必要があります。
 
-React + Vite + Tailwind CSS で作るブラウザ版テトリス。仕様は [spec.md](./spec.md)、実装タスクは [issues/](./issues/README.md) を参照。
+## 今後の改善点
+- `src/game.ts` で **形状情報**（TETROMINO_SHAPES）を使い、衝突判定・回転・ライン消去を実装。
+- React コンポーネントで shape を描画し、`piece.rotation` に応じて表示を切り替え。
+- キーボード入力（左右移動、回転、落下）を追加。
+- 既存のテストを拡張して、実際の形状で動作確認。
 
-## 開発
-
-```bash
-npm install
-npm run dev   # http://localhost:5173/game01/
-```
-
-## テスト(Playwright)
-
-```bash
-npx playwright install chromium   # 初回のみ
-npm test
-```
-
-## ビルド
-
-```bash
-npm run build
-```
-
-GitHub Pages 用のため `base: /game01/` としてあります。
+> **ポイント**：現在はロジックテスト用に 1x1 を使っているだけなので、形状が 1x1 のままになるのは仕様上正しい。ゲーム性を高めたい場合は上記項目を追加してください。
