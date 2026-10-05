@@ -86,6 +86,16 @@ export function movePiece(
   return { ...state, piece: moved };
 }
 
+// 移動（dx/dy）のみ。衝突・ゲームオーバー時は null。
+export function move(state: GameState, dx: number, dy: number): GameState | null {
+  return movePiece(state, dx, dy, 0);
+}
+
+// 回転。dir: +1 = 時計回り / -1 = 反時計回り。衝突時は null。
+export function rotate(state: GameState, dir: 1 | -1 = 1): GameState | null {
+  return movePiece(state, 0, 0, dir);
+}
+
 // ピースを固定し、ライン消し・スコア・レベルを更新、次のピースへ移行する
 export function lockPiece(state: GameState): GameState {
   const board = state.board.map((row) => row.slice());

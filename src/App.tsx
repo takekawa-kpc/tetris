@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   createInitialState,
-  movePiece,
+  move,
+  rotate,
   lockPiece,
   dropIntervalMs,
   pieceCells,
@@ -77,7 +78,7 @@ export default function App() {
     const id = setInterval(() => {
       setState((s) => {
         if (s.isOver) return s;
-        return movePiece(s, 0, 1, 0) ?? lockPiece(s);
+        return move(s, 0, 1) ?? lockPiece(s);
       });
     }, dropIntervalMs(state.level));
     return () => clearInterval(id);
@@ -99,19 +100,19 @@ export default function App() {
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          setState((s) => movePiece(s, -1, 0, 0) ?? s);
+          setState((s) => move(s, -1, 0) ?? s);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setState((s) => movePiece(s, 1, 0, 0) ?? s);
+          setState((s) => move(s, 1, 0) ?? s);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setState((s) => movePiece(s, 0, 0, 1) ?? s);
+          setState((s) => rotate(s, 1) ?? s);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setState((s) => movePiece(s, 0, 1, 0) ?? s);
+          setState((s) => move(s, 0, 1) ?? s);
           break;
         case ' ':
           e.preventDefault();
@@ -119,7 +120,7 @@ export default function App() {
             if (s.isOver) return s;
             let cur = s;
             while (true) {
-              const next = movePiece(cur, 0, 1, 0);
+              const next = move(cur, 0, 1);
               if (!next) break;
               cur = next;
             }
