@@ -134,6 +134,29 @@ export function lockPiece(state: GameState): GameState {
   };
 }
 
+// ソフトドロップ (↓): 1 セル下へ移動し 1 点加算。動けなければ無変更（得点なし）。
+export function softDrop(state: GameState): GameState {
+  if (state.isOver) return state;
+  const moved = move(state, 0, 1);
+  if (!moved) return state;
+  return { ...moved, score: moved.score + 1 };
+}
+
+// ハードドロップ (Space): 着地位置まで落下してロック、落下セル数 × 2 点加算。
+export function hardDrop(state: GameState): GameState {
+  if (state.isOver) return state;
+  let cur = state;
+  let dropped = 0;
+  for (;;) {
+    const next = move(cur, 0, 1);
+    if (!next) break;
+    cur = next;
+    dropped++;
+  }
+  const locked = lockPiece(cur);
+  return { ...locked, score: locked.score + dropped * 2 };
+}
+
 // ゲームオーバー: 新しいピースが出現位置で既存セルと衝突している状態
 export function isGameOver(state: GameState): boolean {
   return state.isOver || collides(state.board, state.piece);

@@ -3,6 +3,8 @@ import {
   createInitialState,
   move,
   rotate,
+  softDrop,
+  hardDrop,
   lockPiece,
   dropIntervalMs,
   pieceCells,
@@ -112,20 +114,11 @@ export default function App() {
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setState((s) => move(s, 0, 1) ?? s);
+          setState((s) => softDrop(s));
           break;
         case ' ':
           e.preventDefault();
-          setState((s) => {
-            if (s.isOver) return s;
-            let cur = s;
-            while (true) {
-              const next = move(cur, 0, 1);
-              if (!next) break;
-              cur = next;
-            }
-            return lockPiece(cur);
-          });
+          setState((s) => hardDrop(s));
           break;
       }
     };
