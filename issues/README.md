@@ -7,7 +7,7 @@
 | 003 | Move & Rotate | ✅ 完了（コア範囲 / 壁打ち→012・smooth→014 は別 Issue） |
 | 004 | Soft & Hard Drop | ✅ 完了 |
 | 005 | Line Clear | ✅ 完了（2 フェーズ + フラッシュ + アニメ中入力制御） |
-| 006 | Score & Level | 🔄 実装中（加算表・レベル・速度済み / 視覚フィードバック残） |
+| 006 | Score & Level | ✅ 完了（加算表・レベル・速度 + レベルアップ視覚フィードバック） |
 | 007 | Next & Hold | ⬜ 未着手 |
 | 008 | Pause & Game Over | ⬜ 未着手 |
 | 009 | Highscore | ⬜ 未着手 |
@@ -32,10 +32,10 @@
 - 003 は **Move & Rotate** を `move`/`rotate` に抽出し、テスト `e2e/03-move-rotate.test.ts` を追加の上 **✅ 完了** に更新（smooth→014・壁打ち→012 は別 Issue）
 - 004 は **Soft & Hard Drop** の得点加算を `softDrop`/`hardDrop` で実装し、テスト `e2e/04-soft-hard-drop.test.ts` を追加の上 **✅ 完了** に更新
 - 005 は **ライン消しとアニメーション** を 2 フェーズ化（`lockPiece`/`resolveClear`）し、フラッシュアニメーションとアニメーション中の入力制御を実装、テスト `e2e/05-line-clear.test.ts` を追加の上 **✅ 完了** に更新
+- 006 は **スコアとレベル** のレベルアップ視覚フィードバック（`levelForLines`/`isLevelUp` ＋ 900ms バナー＆高ライト）を実装、テスト `e2e/06-score-level.test.ts` を追加の上 **✅ 完了** に更新
 - 進捗表を `issues/README.md` に掲載（`issues/progress.md` は不要のため削除済み）
 
 ## 今後のタスク
-- 006: レベルアップ時の視覚フィードバック
 - 007〜: Next & Hold、Pause、Highscore などへ着手
 
 ---

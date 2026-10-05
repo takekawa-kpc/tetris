@@ -9,6 +9,7 @@ import {
   dropToBottom,
   dropIntervalMs,
   pieceCells,
+  isLevelUp,
   type GameState,
 } from './game';
 import { BOARD_H, BOARD_W, TETROMINO_SHAPES, type TetrominoId } from './tetromino';
@@ -25,6 +26,9 @@ const COLORS: Record<TetrominoId, string> = {
 
 // ライン消しのフラッシュ時間 (spec §2.3: 約 250ms)
 const CLEAR_MS = 250;
+
+// レベルアップの視覚フィードバック時間 (spec §2.5: 一瞬の高ライト表示)
+const LEVEL_UP_MS = 900;
 
 // フラッシュ中に表示する情報
 type Flash = {
@@ -63,11 +67,19 @@ function buildDisplay(state: GameState): (TetrominoId | null)[][] {
   return grid;
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({
+  label,
+  value,
+  className = '',
+}: {
+  label: string;
+  value: number;
+  className?: string;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-4">
       <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
-      <span className="tabular-nums text-lg font-semibold" aria-live="polite">
+      <span className={'tabular-nums text-lg font-semibold ' + className} aria-live="polite">
         {value}
       </span>
     </div>
@@ -78,6 +90,8 @@ export default function App() {
   const [state, setState] = useState<GameState>(createInitialState);
   const [started, setStarted] = useState(false);
   const [flash, setFlash] = useState<Flash | null>(null);
+  // レベルアップ中表示する新レベル（null なら表示なし）
+  const [levelUp, setLevelUp] = useState<number | null>(null);
 
   // キー入力・ゲームループが常に最新の state を参照できるよう ref で保持
   const stateRef = useRef(state);
@@ -97,6 +111,10 @@ export default function App() {
     const locked = lockPiece(s);
     const final = resolveClear(locked);
     const scored = dropped > 0 ? { ...final, score: final.score + dropped * 2 } : final;
+    // レベルアップなら視覚フィードバック（一瞬の高ライト表示, spec §2.5）
+    if (isLevelUp(s.level, scored.level)) {
+      setLevelUp(scored.level);
+    }
     if (locked.clearingRows.length > 0) {
       setFlash({ board: locked.board, rows: locked.clearingRows, final: scored });
     } else {
@@ -138,6 +156,13 @@ export default function App() {
     }, CLEAR_MS);
     return () => clearTimeout(id);
   }, [flash]);
+
+  // レベルアップの視覚フィードバック: 約 900ms 後に解除
+  useEffect(() => {
+    if (levelUp === null) return;
+    const id = setTimeout(() => setLevelUp(null), LEVEL_UP_MS);
+    return () => clearTimeout(id);
+  }, [levelUp]);
 
   // キーボード入力
   useEffect(() => {
@@ -213,6 +238,18 @@ export default function App() {
             })}
           </div>
 
+          {/* レベルアップフィードバック: 一瞬の高ライト表示 (spec §2.5) */}
+          {levelUp !== null && (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+              <div
+                key={levelUp}
+                className="level-up-banner rounded-lg bg-black/60 px-5 py-2 text-lg font-bold text-amber-300 shadow-lg backdrop-blur-sm dark:bg-white/10"
+              >
+                レベルアップ！ Lv.{levelUp}
+              </div>
+            </div>
+          )}
+
           {/* Ready / Game Over オーバーレイ */}
           {(!started || state.isOver) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-white/70 backdrop-blur-sm dark:bg-gray-950/70">
@@ -246,7 +283,11 @@ export default function App() {
 
           <div className="flex flex-col gap-3 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-900">
             <Stat label="スコア" value={state.score} />
-            <Stat label="レベル" value={state.level} />
+            <Stat
+              label="レベル"
+              value={state.level}
+              className={levelUp !== null ? 'level-glow' : ''}
+            />
             <Stat label="ライン" value={state.lines} />
           </div>
 

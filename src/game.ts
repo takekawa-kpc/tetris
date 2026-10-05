@@ -52,6 +52,16 @@ export function scoreForClear(cleared: number, level: number): number {
   return (LINE_SCORES[cleared] ?? 0) * level;
 }
 
+// spec §2.5: 消し行数の累計 10 行ごとに +1 (上限 15)
+export function levelForLines(lines: number): number {
+  return Math.min(15, Math.floor(lines / 10) + 1);
+}
+
+// レベルアップ検出: 解決後のレベルが解決前より上がっていれば true（視覚フィードバックのトリガー）
+export function isLevelUp(beforeLevel: number, afterLevel: number): boolean {
+  return afterLevel > beforeLevel;
+}
+
 // ピースが占める盤面絶対座標(セル)のリスト
 export function pieceCells(piece: Piece): { col: number; row: number }[] {
   return TETROMINO_SHAPES[piece.id][piece.rotation].map(([c, r]) => ({
@@ -125,7 +135,7 @@ export function resolveClear(state: GameState): GameState {
   const newBoard = freshRows.concat(remaining);
 
   const lines = state.lines + cleared;
-  const level = Math.min(15, Math.floor(lines / 10) + 1);
+  const level = levelForLines(lines);
   const score = state.score + scoreForClear(cleared, state.level);
 
   // 次のピースへ移行
