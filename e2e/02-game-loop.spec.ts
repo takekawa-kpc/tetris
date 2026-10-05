@@ -3,6 +3,7 @@ import {
   createInitialState,
   movePiece,
   lockPiece,
+  completeLock,
   isGameOver,
   dropIntervalMs,
   scoreForClear,
@@ -77,14 +78,14 @@ test('ロックで盤面に 4 セルが書き込まれる', () => {
 test('ロック後に次のピースへ移行する', () => {
   const s = createInitialState();
   const prevNext = s.nextPiece;
-  const locked = lockPiece(s);
+  const locked = completeLock(s);
   expect(locked.piece).toEqual(prevNext);
 });
 
 test('ライン消し: 1 行 = 40 × レベル', () => {
   const board = createEmptyBoard();
   board[19] = Array(10).fill('I');
-  const locked = lockPiece({ ...createInitialState(), board });
+  const locked = completeLock({ ...createInitialState(), board });
   expect(locked.lines).toBe(1);
   expect(locked.score).toBe(40);
   expect(hasFullRow(locked.board)).toBe(false);
@@ -96,7 +97,7 @@ test('ライン消し: 4 行 (テトリス) = 1200 × レベル', () => {
   board[17] = Array(10).fill('O');
   board[18] = Array(10).fill('T');
   board[19] = Array(10).fill('S');
-  const locked = lockPiece({ ...createInitialState(), board });
+  const locked = completeLock({ ...createInitialState(), board });
   expect(locked.lines).toBe(4);
   expect(locked.score).toBe(1200);
 });
@@ -112,7 +113,7 @@ test('スコア加算表が spec と一致する', () => {
 test('10 行ごとにレベルが上がる', () => {
   const board = createEmptyBoard();
   board[19] = Array(10).fill('I');
-  const locked = lockPiece({ ...createInitialState(), board, lines: 9 });
+  const locked = completeLock({ ...createInitialState(), board, lines: 9 });
   expect(locked.lines).toBe(10);
   expect(locked.level).toBe(2);
 });
@@ -120,7 +121,7 @@ test('10 行ごとにレベルが上がる', () => {
 test('レベルは 15 で上限', () => {
   const board = createEmptyBoard();
   board[19] = Array(10).fill('I');
-  const locked = lockPiece({ ...createInitialState(), board, lines: 300 });
+  const locked = completeLock({ ...createInitialState(), board, lines: 300 });
   expect(locked.level).toBe(15);
 });
 

@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+/* ライン消しのフラッシュ: 満行が白く光って溶けて消える (spec §2.3) */
+@keyframes tetris-clear {
+  0% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: scaleY(1);
+  }
+  40% {
+    opacity: 1;
+    filter: brightness(2.2);
+    transform: scaleY(0.92);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(2.6);
+    transform: scaleY(0.25);
+  }
+}
+
+.tetris-clear {
+  animation: tetris-clear 250ms ease-in forwards;
+}

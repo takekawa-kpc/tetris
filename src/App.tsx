@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createInitialState,
   move,
   rotate,
   softDrop,
-  hardDrop,
   lockPiece,
+  resolveClear,
+  dropToBottom,
   dropIntervalMs,
   pieceCells,
   type GameState,
@@ -20,6 +21,16 @@ const COLORS: Record<TetrominoId, string> = {
   Z: '#f87171', // 赤
   J: '#60a5fa', // 青
   L: '#fb923c', // 橙
+};
+
+// ライン消しのフラッシュ時間 (spec §2.3: 約 250ms)
+const CLEAR_MS = 250;
+
+// フラッシュ中に表示する情報
+type Flash = {
+  board: (TetrominoId | null)[][]; // ロック済み・満行を含む盤面
+  rows: number[]; // フラッシュする行番号
+  final: GameState; // 解決後(次のピース・スコア反映済み)
 };
 
 function MiniPiece({ id }: { id: TetrominoId }) {
@@ -66,25 +77,67 @@ function Stat({ label, value }: { label: string; value: number }) {
 export default function App() {
   const [state, setState] = useState<GameState>(createInitialState);
   const [started, setStarted] = useState(false);
+  const [flash, setFlash] = useState<Flash | null>(null);
+
+  // キー入力・ゲームループが常に最新の state を参照できるよう ref で保持
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // フラッシュ中は落下・入力を停止する
+  const acting = started && !state.isOver && !flash;
 
   const reset = useCallback(() => {
     setState(createInitialState());
+    setFlash(null);
     setStarted(true);
   }, []);
 
-  const acting = started && !state.isOver;
+  // ロック発生 → 満行があればフラッシュ、なければ直結で解決(次ピース出現)
+  const performLock = useCallback((s: GameState, dropped: number) => {
+    const locked = lockPiece(s);
+    const final = resolveClear(locked);
+    const scored = dropped > 0 ? { ...final, score: final.score + dropped * 2 } : final;
+    if (locked.clearingRows.length > 0) {
+      setFlash({ board: locked.board, rows: locked.clearingRows, final: scored });
+    } else {
+      setState(scored);
+    }
+  }, []);
 
-  // ゲームループ: 落下間隔ごとに 1 セル下方へ。できなければロック
+  // ハードドロップ (Space): 着地 → ロック(満行あればフラッシュ) → 落下セル × 2 点
+  const performHardDrop = useCallback(() => {
+    const s = stateRef.current;
+    if (s.isOver) return;
+    const { state: bottom, dropped } = dropToBottom(s);
+    performLock(bottom, dropped);
+  }, [performLock]);
+
+  // ゲームループ: 落下間隔ごとに 1 セル下方へ。動けなければロック
   useEffect(() => {
     if (!acting) return;
     const id = setInterval(() => {
-      setState((s) => {
-        if (s.isOver) return s;
-        return move(s, 0, 1) ?? lockPiece(s);
-      });
+      const s = stateRef.current;
+      if (s.isOver) return;
+      const moved = move(s, 0, 1);
+      if (moved) {
+        setState(moved);
+      } else {
+        performLock(s, 0);
+      }
     }, dropIntervalMs(state.level));
     return () => clearInterval(id);
-  }, [acting, state.level]);
+  }, [acting, state.level, performLock]);
+
+  // フラッシュ完了: 約 250ms 後に解決状態へ反映(次のピース出現・落下再開)
+  useEffect(() => {
+    if (!flash) return;
+    const final = flash.final;
+    const id = setTimeout(() => {
+      setState(final);
+      setFlash(null);
+    }, CLEAR_MS);
+    return () => clearTimeout(id);
+  }, [flash]);
 
   // キーボード入力
   useEffect(() => {
@@ -94,39 +147,42 @@ export default function App() {
         setStarted(true);
         return;
       }
-      if (state.isOver) {
+      if (stateRef.current.isOver) {
         if (e.key === 'r' || e.key === 'R') reset();
         return;
       }
-      if (!started) return;
+      // フラッシュ中は操作入力を無視
+      if (!started || flash) return;
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          setState((s) => move(s, -1, 0) ?? s);
+          setState((cur) => move(cur, -1, 0) ?? cur);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setState((s) => move(s, 1, 0) ?? s);
+          setState((cur) => move(cur, 1, 0) ?? cur);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setState((s) => rotate(s, 1) ?? s);
+          setState((cur) => rotate(cur, 1) ?? cur);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setState((s) => softDrop(s));
+          setState((cur) => softDrop(cur));
           break;
         case ' ':
           e.preventDefault();
-          setState((s) => hardDrop(s));
+          performHardDrop();
           break;
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [started, state.isOver, reset]);
+  }, [started, flash, reset, performHardDrop]);
 
-  const display = buildDisplay(state);
+  // 表示用盤面: フラッシュ中はロック済み盤面、それ以外は進行中盤面
+  const display = flash ? flash.board : buildDisplay(state);
+  const flashRows = new Set(flash?.rows ?? []);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-100 p-6 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
@@ -139,15 +195,22 @@ export default function App() {
             style={{ gridTemplateColumns: `repeat(${BOARD_W}, 1fr)` }}
             aria-hidden="true"
           >
-            {display.flat().map((cell, i) => (
-              <div
-                key={i}
-                className="h-7 w-7 rounded-[3px] bg-white transition-colors duration-150 dark:bg-gray-900"
-                style={{
-                  backgroundColor: cell ? COLORS[cell] : undefined,
-                }}
-              />
-            ))}
+            {display.flat().map((cell, i) => {
+              const row = Math.floor(i / BOARD_W);
+              const isFlashing = flashRows.has(row);
+              return (
+                <div
+                  key={i}
+                  className={
+                    'h-7 w-7 rounded-[3px] bg-white transition-colors duration-150 dark:bg-gray-900 ' +
+                    (isFlashing ? 'tetris-clear' : '')
+                  }
+                  style={{
+                    backgroundColor: cell ? COLORS[cell] : undefined,
+                  }}
+                />
+              );
+            })}
           </div>
 
           {/* Ready / Game Over オーバーレイ */}

@@ -9,12 +9,13 @@ import type { Piece, Board, TetrominoId, Rotation } from './tetromino';
 
 export type GameState = {
   board: Board;
-  piece: Piece; // 現在落下中のピース
+  piece: Piece; // 現在落下中のピース(ロック後は固定済み)
   nextPiece: Piece; // 次のピース
   isOver: boolean;
   score: number;
   lines: number;
   level: number;
+  clearingRows: number[]; // 満行(消去中)の行番号。空配列なら解決済み
 };
 
 // 盤面上部の中央(幅 10 に対して)から出現させる位置
@@ -38,6 +39,7 @@ export function createInitialState(): GameState {
     score: 0,
     lines: 0,
     level: 1,
+    clearingRows: [],
   };
 }
 
@@ -96,7 +98,8 @@ export function rotate(state: GameState, dir: 1 | -1 = 1): GameState | null {
   return movePiece(state, 0, 0, dir);
 }
 
-// ピースを固定し、ライン消し・スコア・レベルを更新、次のピースへ移行する
+// ピースを固定し、満行(消去対象行)を検出する。
+// 消去・スコア・レベル・次ピースの移行は resolveClear で行う(2 フェーズ)。
 export function lockPiece(state: GameState): GameState {
   const board = state.board.map((row) => row.slice());
   for (const { col, row } of pieceCells(state.piece)) {
@@ -105,9 +108,17 @@ export function lockPiece(state: GameState): GameState {
     }
   }
 
-  // ライン消し
-  const remaining = board.filter((row) => row.some((cell) => cell === null));
-  const cleared = BOARD_H - remaining.length;
+  const clearingRows = board
+    .map((row, i) => (row.every((cell) => cell !== null) ? i : -1))
+    .filter((i) => i !== -1);
+
+  return { ...state, board, clearingRows };
+}
+
+// ロック後の解決: 満行を消去・上段シフト、スコア・レベルを更新、次のピースへ移行する
+export function resolveClear(state: GameState): GameState {
+  const cleared = state.clearingRows.length;
+  const remaining = state.board.filter((_, i) => !state.clearingRows.includes(i));
   const freshRows: (TetrominoId | null)[][] = Array.from({ length: cleared }, () =>
     Array.from({ length: BOARD_W }, () => null)
   );
@@ -131,7 +142,13 @@ export function lockPiece(state: GameState): GameState {
     score,
     lines,
     level,
+    clearingRows: [],
   };
+}
+
+// ロックと解決をまとめて行う（フラッシュアニメーションなしの直結版）
+export function completeLock(state: GameState): GameState {
+  return resolveClear(lockPiece(state));
 }
 
 // ソフトドロップ (↓): 1 セル下へ移動し 1 点加算。動けなければ無変更（得点なし）。
@@ -142,9 +159,8 @@ export function softDrop(state: GameState): GameState {
   return { ...moved, score: moved.score + 1 };
 }
 
-// ハードドロップ (Space): 着地位置まで落下してロック、落下セル数 × 2 点加算。
-export function hardDrop(state: GameState): GameState {
-  if (state.isOver) return state;
+// 着地位置まで落下（ロック前）。落下セル数も返す。
+export function dropToBottom(state: GameState): { state: GameState; dropped: number } {
   let cur = state;
   let dropped = 0;
   for (;;) {
@@ -153,7 +169,14 @@ export function hardDrop(state: GameState): GameState {
     cur = next;
     dropped++;
   }
-  const locked = lockPiece(cur);
+  return { state: cur, dropped };
+}
+
+// ハードドロップ (Space): 着地位置まで落下してロック、落下セル数 × 2 点加算。
+export function hardDrop(state: GameState): GameState {
+  if (state.isOver) return state;
+  const { state: bottom, dropped } = dropToBottom(state);
+  const locked = completeLock(bottom);
   return { ...locked, score: locked.score + dropped * 2 };
 }
 

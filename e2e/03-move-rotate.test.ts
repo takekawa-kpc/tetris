@@ -21,6 +21,7 @@ function makeState(piece: Piece): GameState {
     score: 0,
     lines: 0,
     level: 1,
+    clearingRows: [],
   };
 }
 
