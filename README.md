@@ -6,7 +6,7 @@ React + Vite + Tailwind CSS で作るブラウザ版テトリス。仕様は [sp
 
 ```bash
 npm install
-npm run dev   # http://localhost:5173/game01/
+npm run dev   # http://localhost:5173/tetris/
 ```
 
 ## テスト(Playwright)
@@ -22,4 +22,4 @@ npm test
 npm run build
 ```
 
-GitHub Pages 用のため `base: /game01/` としてあります。
+GitHub Pages 用のため `base: /tetris/` としてあります。

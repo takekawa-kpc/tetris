@@ -11,7 +11,7 @@ export default defineConfig({
     ['html', { open: 'never' }],
   ],
   use: {
-    baseURL: 'http://localhost:4173/game01/',
+    baseURL: 'http://localhost:4173/tetris/',
     trace: 'on-first-retry',
     ...devices['Desktop Chrome'],
   },
@@ -23,7 +23,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev -- --port 4173 --strictPort',
-    url: 'http://localhost:4173/game01/',
+    url: 'http://localhost:4173/tetris/',
     reuseExistingServer: !process.env.CI,
   },
 })
